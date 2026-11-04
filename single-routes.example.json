@@ -1,0 +1,12 @@
+{
+  "routes": {
+    "mailbox@example.org": [
+      {
+        "login": "employee1@example.org"
+      },
+      {
+        "login": "employee2@example.org"
+      }
+    ]
+  }
+}

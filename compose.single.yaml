@@ -1,0 +1,21 @@
+# Standalone test deployment: no SMTP and no web administration.
+# Run with: docker compose -f compose.single.yaml up -d --build
+services:
+  mail2yandex-single:
+    build: .
+    restart: unless-stopped
+    env_file:
+      - .env.single
+    environment:
+      INPUT_MODE: imap
+      ADMIN_ENABLED: "false"
+      IMAP_ACCOUNTS_FILE: ""
+      ROUTES_FILE: /config/routes.json
+      YANDEX_CHAT_ID: ""
+      YANDEX_LOGIN: ""
+      YANDEX_USER_ID: ""
+    volumes:
+      - ./data:/data
+      - ./single-routes.json:/config/routes.json:ro
+    security_opt:
+      - no-new-privileges:true

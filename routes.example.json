@@ -1,0 +1,26 @@
+{
+  "routes": {
+    "monitoring@example.org": [
+      {
+        "chat_id": "0/0/monitoring-chat"
+      },
+      {
+        "login": "oncall"
+      },
+      {
+        "chat_id": "0/0/operations-chat"
+      }
+    ],
+    "helpdesk@example.org": [
+      {
+        "chat_id": "0/0/helpdesk-chat"
+      },
+      {
+        "login": "engineer"
+      }
+    ],
+    "director@example.org": {
+      "login": "director"
+    }
+  }
+}
