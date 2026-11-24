@@ -44,6 +44,25 @@ class MailCssCleanupTests(unittest.TestCase):
         )
         self.assertEqual(clean_notification_body(source), source)
 
+    def test_comment_label_collapses_many_blank_lines(self):
+        source = (
+            "В задание ID#6982 от user@example.org добавлен комментарий:"
+            "\n\n \n\u00a0\n\n\n\t\n\n"
+            "Чистяков Кирилл Сергеевич 25.11.26 02:05\nпроверь визуал"
+        )
+        actual = clean_notification_body(source)
+        self.assertIn(
+            "добавлен комментарий:\nЧистяков Кирилл Сергеевич 25.11.26 02:05\nпроверь визуал",
+            actual,
+        )
+
+    def test_comment_label_without_blank_lines(self):
+        source = "В задание ID#6982 добавлен комментарий:Автор комментария"
+        self.assertEqual(
+            clean_notification_body(source),
+            "В задание ID#6982 добавлен комментарий:\nАвтор комментария",
+        )
+
     def test_css_inline_with_prose(self):
         actual = clean_notification_body("Описание body{margin:0;padding:8px;} продолжается")
         self.assertEqual(actual, "Описание  продолжается")
