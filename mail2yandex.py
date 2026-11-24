@@ -156,6 +156,15 @@ def clean_notification_body(body):
             parts[5] += r"[,]?"
         pattern = gap.join(parts) + r"[!.]?"
         body = re.sub(pattern, "", body, flags=re.IGNORECASE)
+    # Restore paragraph boundaries lost by HTML-to-text conversion in task mail.
+    # Only insert missing breaks; never duplicate an existing newline.
+    body = re.sub(r"(?<=\S)[ \t]*(?=Тема\s*:)", "\n", body)
+    body = re.sub(r"(?<=\S)[ \t]*(?=В\s+задание\b)", "\n", body)
+    # Author/timestamp is followed by comment text without a separator.
+    body = re.sub(
+        r"(\b\d{2}\.\d{2}\.\d{2,4}[ \t]+\d{2}:\d{2})[ \t]*(?=\S)",
+        r"\1\n", body,
+    )
     # Remove whitespace-only spacer lines and collapse excess line breaks.
     body = re.sub(r"(?m)^[^\S\n\r]*$", "", body)
     return re.sub(r"\n{3,}", "\n\n", body).strip()
