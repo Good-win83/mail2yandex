@@ -63,6 +63,37 @@ class MailCssCleanupTests(unittest.TestCase):
             "В задание ID#6982 добавлен комментарий:\nАвтор комментария",
         )
 
+    def test_markdown_bold_task_id_timestamp_and_comment(self):
+        message = EmailMessage()
+        message["Subject"] = "Добавлен комментарий"
+        message.set_content(
+            "Уважаемый(ая) IT-отдел!\n"
+            "В задание ID#6982 от user@example.org добавлен комментарий:\n"
+            "Чистяков Кирилл Сергеевич 25.11.26 02:05\n"
+            "проверь визуал"
+        )
+        result = format_message(message.as_bytes(), "from@example.org", ["to@example.org"], 5500)
+        self.assertIn("**В задание ID#6982** от user@example.org", result)
+        self.assertIn("Чистяков Кирилл Сергеевич **25.11.26 02:05**", result)
+        self.assertIn("\n**проверь визуал**", result)
+
+    def test_no_bold_for_regular_mail(self):
+        message = EmailMessage()
+        message["Subject"] = "Сводка"
+        message.set_content("Проверка статуса 25.11.26 02:05\nвсё работает")
+        result = format_message(message.as_bytes(), "from@example.org", ["to@example.org"], 5500)
+        self.assertNotIn("**", result)
+
+    def test_multiline_comment_highlight(self):
+        message = EmailMessage()
+        message.set_content(
+            "В задание ID#42 добавлен комментарий:\n"
+            "Автор 25.11.26 02:05\n"
+            "Первая строка\nВторая строка"
+        )
+        result = format_message(message.as_bytes(), "from@example.org", ["to@example.org"], 5500)
+        self.assertIn("**Первая строка**\n**Вторая строка**", result)
+
     def test_css_inline_with_prose(self):
         actual = clean_notification_body("Описание body{margin:0;padding:8px;} продолжается")
         self.assertEqual(actual, "Описание  продолжается")
