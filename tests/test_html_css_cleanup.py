@@ -1,0 +1,48 @@
+import unittest
+from email.message import EmailMessage
+
+from mail2yandex import clean_notification_body, format_message
+
+
+CSS = (
+    "body{margin:0;padding:8px;}\n"
+    "p{line-height:1.15;margin:0;white-space:pre-wrap;}\n"
+    "ol,ul{margin-top:0;margin-bottom:0;}\n"
+    "img{border:none;}\n"
+    "li>p{display:inline;}"
+)
+
+
+class MailCssCleanupTests(unittest.TestCase):
+    def test_css_lines_surrounded_by_comment(self):
+        source = (
+            "Уважаемый(ая) IT-отдел! Тема: Test\n"
+            "В задание ID#6982 добавлен комментарий:\n"
+            + CSS + "\n"
+            "Чистяков Кирилл Сергеевич 25.11.26 01:34 Test CSS"
+        )
+        actual = clean_notification_body(source)
+        self.assertNotIn("margin:0", actual)
+        self.assertNotIn("display:inline", actual)
+        self.assertIn("В задание ID#6982 добавлен комментарий:", actual)
+        self.assertIn("25.11.26 01:34 Test CSS", actual)
+
+    def test_css_inline_with_prose(self):
+        actual = clean_notification_body("Описание body{margin:0;padding:8px;} продолжается")
+        self.assertEqual(actual, "Описание  продолжается")
+
+    def test_mail_format_keeps_visible_content(self):
+        message = EmailMessage()
+        message["Subject"] = "Test"
+        message.set_content("Комментарий:\n" + CSS + "\nРезультат: готово")
+        result = format_message(message.as_bytes(), "sender@example.org", ["staff@example.org"], 5500)
+        self.assertIn("Тема: Test", result)
+        self.assertIn("Результат: готово", result)
+        self.assertNotIn("white-space:pre-wrap", result)
+
+    def test_non_css_braces_preserved(self):
+        self.assertEqual(clean_notification_body("Текст hello{note: keep this}"), "Текст hello{note: keep this}")
+
+
+if __name__ == "__main__":
+    unittest.main()
