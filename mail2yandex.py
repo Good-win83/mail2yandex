@@ -179,10 +179,42 @@ def clean_notification_body(body):
 
 
 
+
+def format_task_comment(body):
+    """Add Messenger Markdown bold emphasis only to task-comment notifications."""
+    task = re.search(r"\bВ\s+задание\s+ID#\d+\b", body, flags=re.IGNORECASE)
+    if not task or not re.search(r"добавлен\s+комментарий:", body, flags=re.IGNORECASE):
+        return body
+
+    body = body[:task.start()] + "**" + task.group(0) + "**" + body[task.end():]
+    # The timestamp belongs to the comment author, not the email subject.
+    timestamp = re.search(
+        r"\b\d{2}\.\d{2}\.\d{2,4}[ \t]+\d{2}:\d{2}(?=\n|$)",
+        body,
+    )
+    if timestamp is None:
+        return body
+    before = body[:timestamp.start()]
+    after = body[timestamp.end():]
+    body = before + "**" + timestamp.group(0) + "**" + after
+
+    # The comment itself starts on the line after the author/timestamp.
+    # Bold each nonempty line so multiline comments remain readable.
+    boundary = timestamp.start() + len(timestamp.group(0)) + 4
+    prefix, comment = body[:boundary], body[boundary:]
+    if not comment.startswith("\n"):
+        return body
+    lines = comment[1:].split("\n")
+    lines = ["**" + line + "**" if line.strip() else line for line in lines]
+    return prefix + "\n" + "\n".join(lines)
+
+
+
 def format_message(raw, mail_from, recipients, max_chars):
     message = BytesParser(policy=policy.default).parsebytes(raw)
     subject = str(message.get("Subject", "(без темы)"))[:500]
     body = clean_notification_body(extract_body(message)) or "(текст отсутствует; возможно, письмо содержит только вложения)"
+    body = format_task_comment(body)
     result = f"📧 Новое письмо\nТема: {subject}\n\n{body}"
     if len(result) > max_chars:
         result = result[:max_chars - len("\n\n[Сообщение сокращено]")] + "\n\n[Сообщение сокращено]"
