@@ -25,7 +25,24 @@ class MailCssCleanupTests(unittest.TestCase):
         self.assertNotIn("margin:0", actual)
         self.assertNotIn("display:inline", actual)
         self.assertIn("В задание ID#6982 добавлен комментарий:", actual)
-        self.assertIn("25.11.26 01:34 Test CSS", actual)
+        self.assertIn("25.11.26 01:34\nTest CSS", actual)
+
+    def test_task_notification_line_breaks(self):
+        source = (
+            "Уважаемый(ая) IT-отдел!Тема: Test"
+            "В задание ID#6982 от kirill@example.org добавлен комментарий:\n"
+            "Чистяков Кирилл Сергеевич 25.11.26 01:50Test #2"
+        )
+        cleaned = clean_notification_body(source)
+        self.assertIn("IT-отдел!\nТема: Test\nВ задание", cleaned)
+        self.assertIn("25.11.26 01:50\nTest #2", cleaned)
+
+    def test_existing_line_breaks_not_doubled(self):
+        source = (
+            "Уважаемый(ая) IT-отдел!\nТема: Test\nВ задание ID#6982\n"
+            "Чистяков Кирилл Сергеевич 25.11.26 01:50\nTest #2"
+        )
+        self.assertEqual(clean_notification_body(source), source)
 
     def test_css_inline_with_prose(self):
         actual = clean_notification_body("Описание body{margin:0;padding:8px;} продолжается")
