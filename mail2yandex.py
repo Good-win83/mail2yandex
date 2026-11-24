@@ -165,6 +165,14 @@ def clean_notification_body(body):
         r"(\b\d{2}\.\d{2}\.\d{2,4}[ \t]+\d{2}:\d{2})[ \t]*(?=\S)",
         r"\1\n", body,
     )
+    # Mail templates often insert a large whitespace block after this label.
+    # Keep exactly one newline before the comment author or content.
+    body = re.sub(
+        r"(добавлен[ \t]+комментарий:)[\s\u00a0\u2000-\u200a\u202f\u205f\u3000]*",
+        lambda match: match.group(1) + "\n",
+        body,
+        flags=re.IGNORECASE,
+    )
     # Remove whitespace-only spacer lines and collapse excess line breaks.
     body = re.sub(r"(?m)^[^\S\n\r]*$", "", body)
     return re.sub(r"\n{3,}", "\n\n", body).strip()
