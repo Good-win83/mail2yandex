@@ -117,13 +117,29 @@ def clean_notification_body(body):
     """
     import unicodedata
 
-    # Remove standalone CSS rules that arrive as visible plain text.
-    # A line must contain selector { property: value; } to be discarded.
-    body = re.sub(
-        r"(?m)^[ \t]*[^\n{}]{1,120}\{[^\n{}]*:[^\n{}]*\}[ \t]*$",
-        "", body,
-    )
     body = unicodedata.normalize("NFKC", body)
+    # Some mail generators put CSS inside text/plain or inline with visible text,
+    # not inside HTML <style>. Remove complete selector/declaration blocks
+    # without consuming adjacent words or the actual comment text.
+    css_rule = re.compile(
+        r"(?<![\w.-])(?:[.#]?[A-Za-z][\w-]*"
+        r"(?:\s*[>+~]\s*[.#]?[A-Za-z][\w-]*)*"
+        r"(?:\s*,\s*[.#]?[A-Za-z][\w-]*(?:\s*[>+~]\s*[.#]?[A-Za-z][\w-]*)*)*"
+        r"|\*)\s*\{\s*([-A-Za-z][\w-]*)\s*:\s*[^{}]*\}",
+        re.IGNORECASE,
+    )
+    css_properties = {
+        "margin", "margin-top", "margin-bottom", "padding", "padding-top",
+        "padding-bottom", "line-height", "white-space", "border", "display",
+        "color", "background", "font", "font-size", "font-family", "width",
+        "height", "text-align", "text-decoration", "list-style", "opacity",
+    }
+    def remove_css_rule(match):
+        declaration = match.group(0)
+        property_name = match.group(1).lower()
+        return "" if property_name in css_properties or ";" in declaration else declaration
+
+    body = css_rule.sub(remove_css_rule, body)
     # Strip zero-width formatting characters often inserted by HTML templates.
     body = re.sub(r"[\u200b-\u200d\u2060\ufeff]", "", body)
     gap = r"[\s\u00a0]*"
