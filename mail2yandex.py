@@ -44,16 +44,40 @@ def audit(status, channel, detail=""):
 
 
 class PlainHTML(HTMLParser):
+    """Extract visible text, ignoring CSS, scripts and document metadata."""
+    IGNORED = {"style", "script", "head", "template", "noscript", "svg"}
+
     def __init__(self):
         super().__init__(convert_charrefs=True)
         self.parts = []
+        self.ignored = []
 
     def handle_starttag(self, tag, attrs):
+        if tag in self.IGNORED:
+            self.ignored.append(tag)
+            return
+        if self.ignored:
+            return
         if tag in {"p", "br", "div", "li", "tr", "h1", "h2", "h3"}:
             self.parts.append("\n")
 
+    def handle_startendtag(self, tag, attrs):
+        self.handle_starttag(tag, attrs)
+        if tag in self.IGNORED:
+            self.handle_endtag(tag)
+
+    def handle_endtag(self, tag):
+        if self.ignored:
+            if tag == self.ignored[-1]:
+                self.ignored.pop()
+            return
+        if tag in {"p", "div", "li", "tr", "h1", "h2", "h3"}:
+            self.parts.append("\n")
+
     def handle_data(self, data):
-        self.parts.append(data)
+        if not self.ignored:
+            self.parts.append(data)
+
 
 
 def html_to_text(source):
@@ -93,6 +117,12 @@ def clean_notification_body(body):
     """
     import unicodedata
 
+    # Remove standalone CSS rules that arrive as visible plain text.
+    # A line must contain selector { property: value; } to be discarded.
+    body = re.sub(
+        r"(?m)^[ \t]*[^\n{}]{1,120}\{[^\n{}]*:[^\n{}]*\}[ \t]*$",
+        "", body,
+    )
     body = unicodedata.normalize("NFKC", body)
     # Strip zero-width formatting characters often inserted by HTML templates.
     body = re.sub(r"[\u200b-\u200d\u2060\ufeff]", "", body)
